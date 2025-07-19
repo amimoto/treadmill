@@ -153,6 +153,14 @@ class UI:
         self._elapsed_label.text = elapsed_text
         self._elapsed_label.update()
 
+    def setting_1(self):
+        self.service.grade_change(15)
+        self.service.speed_change(3.5)
+
+    def setting_2(self):
+        self.service.grade_change(15)
+        self.service.speed_change(5)
+
     def setup(self):
         ui.add_head_html(style)
 
@@ -189,6 +197,20 @@ class UI:
                                                     on_click=self.on_run_walk_button)
                     with ui.column().classes('items-stretch'):
                         ui.button('Stop', icon='stop', on_click=self.on_press_stop)
+
+                with ui.row().classes('pt-3 m-auto'):
+                    with ui.column().classes('items-stretch'):
+                        ui.button(
+                            'Normal',
+                            icon='looks_one',
+                            on_click=self.setting_1,
+                        )
+                    with ui.column().classes('items-stretch'):
+                        ui.button(
+                            'Fast',
+                            icon='looks_two',
+                            on_click=self.setting_2,
+                        )
 
             # Main part allowing changes to grade and speed
             with ui.card_section():
