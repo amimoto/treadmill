@@ -11,6 +11,7 @@ class Keyboard:
     def find_keyboard(self):
         devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
         for device in devices:
+            print(f"- {device.name}")
             if device.name != DEVICE_NAME:
                 continue
             return device.path

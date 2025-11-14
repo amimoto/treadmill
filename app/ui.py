@@ -153,6 +153,30 @@ class UI:
         self._elapsed_label.text = elapsed_text
         self._elapsed_label.update()
 
+    def hiit_show(self):
+        if not self._hiit_label.visible:
+            self._hiit_label.visible = True
+
+    def hiit_hide(self):
+        if self._hiit_label.visible:
+            self._hiit_label.visible = False
+
+    def hiit_update_elapsed(self, elapsed:float):
+        minutes = int(elapsed / 60)
+        seconds = elapsed - minutes * 60
+        elapsed_text = f"{minutes:02d}:{seconds:05.02f}"
+        self._hiit_label.text = elapsed_text
+        self._hiit_label.update()
+
+    def hiit_pulse(self):
+        self.service.go_hiit(
+            speed=8.0,
+            duration=60.0,
+        )
+
+    def on_hiit_pulse(self):
+        disown( self.hiit_pulse )
+
     def setting_1(self):
         self.service.grade_change(15)
         self.service.speed_change(3.5)
@@ -188,7 +212,7 @@ class UI:
 
             # Now let's include the action buttons bar
             with ui.card_section():
-                with ui.row():
+                with ui.row().classes('pt-3 m-auto'):
                     with ui.column().classes('items-stretch'):
                         ui.button('Go', icon='play_arrow', on_click=self.on_press_go)
                     with ui.column().classes('items-stretch'):
@@ -205,6 +229,14 @@ class UI:
                             icon='looks_one',
                             on_click=self.setting_1,
                         )
+
+                    with ui.column().classes('items-stretch'):
+                        ui.button(
+                            'HIT IT',
+                            icon='keyboard_double_arrow_right',
+                            on_click=self.on_hiit_pulse,
+                        )
+
                     with ui.column().classes('items-stretch'):
                         ui.button(
                             'Fast',
@@ -215,7 +247,13 @@ class UI:
             # Main part allowing changes to grade and speed
             with ui.card_section():
                 with ui.row():
-                    self._elapsed_label = ui.label("00:00.00").classes('text-2xl font-mono')
+                    with ui.column().classes('items-stretch'):
+                        self._elapsed_label = ui.label("00:00.00")\
+                                             .classes('text-6xl font-mono')
+                        self._hiit_label = ui.label("00:00.00") \
+                                             .classes('text-6xl font-mono') \
+                                             .style("color: #ff2222")
+                        self._hiit_label.visible = False
 
             with ui.card_section():
                 with ui.row():

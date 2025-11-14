@@ -44,6 +44,7 @@ class App:
         self.target_grade = None
 
         self.start_tic = None
+        self.hiit_end_tic = None
 
     def start_elapsed(self):
         self.start_tic = time.time()
@@ -72,6 +73,15 @@ class App:
     def go_stop(self):
         with self.transport_lock:
             self.treadmill.stop()
+
+    def go_hiit(self, speed: int=0.0, duration: float=60.0):
+        current_speed = self.current_speed
+        last_status = self.status
+        self.treadmill.set_speed(speed)
+        self.hiit_end_tic = time.time() + duration
+        time.sleep(duration)
+        self.treadmill.set_speed(current_speed)
+        self.hiit_end_tic = None
 
     def nudge_speed(self, delta):
         if self.target_speed is None:
@@ -125,6 +135,15 @@ class App:
                                 elapsed = current_tic - self.start_tic
                                 self.ui.update_elapsed(elapsed)
 
+                            # Display the HIIT countdown if it's running
+                            if self.hiit_end_tic:
+                                self.ui.hiit_show()
+                                current_tic = time.time()
+                                elapsed = self.hiit_end_tic - current_tic
+                                self.ui.hiit_update_elapsed(elapsed)
+                            else:
+                                self.ui.hiit_hide()
+
                         elif status in ['idle','ready']:
                             self.status = 'idle'
 
@@ -132,6 +151,7 @@ class App:
                             self.status = 'manual'
 
                         self.ui.update_status( status )
+
                 time.sleep(0.2)
 
             except Exception as ex:
