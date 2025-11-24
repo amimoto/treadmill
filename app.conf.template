@@ -1,0 +1,2 @@
+conninfo: postgresql://treadmill_tracker:PASSWORD@pg.ripsum.com:5432/treadmill
+

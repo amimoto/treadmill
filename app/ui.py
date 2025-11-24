@@ -179,11 +179,11 @@ class UI:
 
     def setting_1(self):
         self.service.grade_change(15)
-        self.service.speed_change(3.5)
+        self.service.speed_change(4.0)
 
     def setting_2(self):
         self.service.grade_change(15)
-        self.service.speed_change(5)
+        self.service.speed_change(5.0)
 
     def setup(self):
         ui.add_head_html(style)
@@ -232,7 +232,7 @@ class UI:
 
                     with ui.column().classes('items-stretch'):
                         ui.button(
-                            'HIT IT',
+                            'HIIT IT',
                             icon='keyboard_double_arrow_right',
                             on_click=self.on_hiit_pulse,
                         )

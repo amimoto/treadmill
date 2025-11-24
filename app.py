@@ -1,9 +1,14 @@
 #!/usr/bin/env python
 
 import threading
+import psycopg
+import psycopg_pool
 import serial
 import time
+import yaml
 import os
+
+from box import Box
 
 from app.ui import UI
 from app.treadmill import Treadmill
@@ -15,8 +20,58 @@ class Duration:
     def __init__(self, start, end=None, metadata=None):
         self.start = start
 
+class Database:
+    def __init__(self, conninfo:str):
+        self.pool = psycopg_pool.ConnectionPool(
+            conninfo,
+            min_size=1,
+            max_size=5,
+            max_lifetime=1800,
+            max_idle=600,
+        )
+
+    def run_query(self, sql, params=None, *, retry=True):
+        try:
+            with self.pool.connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(sql, params)
+                    if cur.description:
+                        return cur.fetchall()
+                    return None
+        except (OperationalError, ConnectionException, AdminShutdown) as e:
+            log.warning("DB connection problem: %s", e)
+            if retry:
+                # pool will have discarded broken conns when they’re returned
+                return run_query(sql, params, retry=False)
+            raise
+
+    def inject_event(self, speed:float, grade:float):
+        """ Injects the new event into the postgres server
+        """
+        print(f"Saving: {speed}km/h {grade}%")
+        self.run_query(
+                """
+                insert into events
+                ( timestamp, speed, grade )
+                values
+                ( NOW(), %(speed)s, %(grade)s )
+                """,
+                {
+                    "speed": speed,
+                    "grade": grade,
+                }
+            )
+
+
 class App:
     def __init__(self, port, debug=False):
+        # Load the config
+        with open("app.conf") as f:
+            buf = f.read()
+            self.config = Box(yaml.safe_load(buf))
+
+        self.db = Database(self.config.conninfo)
+
         # Treadmill driver
         # For the connection to the treadmill
         if port not in PORTS:
@@ -42,6 +97,8 @@ class App:
         self.target_speed = None
         self.current_grade = None
         self.target_grade = None
+        self.last_update_speed = None
+        self.last_update_grade = None
 
         self.start_tic = None
         self.hiit_end_tic = None
@@ -74,13 +131,15 @@ class App:
         with self.transport_lock:
             self.treadmill.stop()
 
-    def go_hiit(self, speed: int=0.0, duration: float=60.0):
-        current_speed = self.current_speed
+    def go_hiit(self, speed: int=0.0, duration: float=60.0, end_speed: int=1.0):
         last_status = self.status
         self.treadmill.set_speed(speed)
         self.hiit_end_tic = time.time() + duration
         time.sleep(duration)
-        self.treadmill.set_speed(current_speed)
+        if end_speed > 1.0:
+            self.treadmill.set_speed(end_speed)
+        else:
+            self.treadmill.set_speed(1.0)
         self.hiit_end_tic = None
 
     def nudge_speed(self, delta):
@@ -112,6 +171,8 @@ class App:
             self.treadmill.set_speed(value)
 
     def treadmill_monitor(self):
+        iteration = 0
+
         while True:
             try:
                 treadmill_status = None
@@ -119,10 +180,20 @@ class App:
                     treadmill_status = self.treadmill.status()
                     if treadmill_status:
                         self.treadmill_status = treadmill_status
+
                         self.current_speed = treadmill_status['speed'].value.value / 10
                         self.current_grade = treadmill_status['grade'].value.value / 100
+
+                        if iteration % 5 == 0:
+                            if self.last_update_speed != self.current_speed \
+                               or self.last_update_grade != self.current_grade:
+                                   self.db.inject_event(self.current_speed, self.current_grade)
+                                   self.last_update_speed = self.current_speed
+                                   self.last_update_grade = self.current_grade
+
                         self.ui.update_speed( self.current_speed )
                         self.ui.update_grade( self.current_grade )
+
                         status = treadmill_status['status']
 
                         if status == 'inuse':
@@ -153,6 +224,7 @@ class App:
                         self.ui.update_status( status )
 
                 time.sleep(0.2)
+                iteration += 1
 
             except Exception as ex:
                 print(f"ERROR: {ex} <{treadmill_status}>")

@@ -13,6 +13,8 @@ rpi-gpio = "^0.7.1"
 pygame = "^2.5.1"
 evdev = "^1.6.1"
 python-box = "^7.0.1"
+psycopg = {extras = ["pool"], version = "^3.2.13"}
+pyyaml = "^6.0.3"
 
 
 [build-system]

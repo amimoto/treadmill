@@ -251,3 +251,6 @@ key.pub
 experiments
 
 poetry.lock
+
+*.conf
+
