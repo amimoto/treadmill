@@ -179,7 +179,7 @@ class UI:
 
     def setting_1(self):
         self.service.grade_change(15)
-        self.service.speed_change(4.5)
+        self.service.speed_change(4)
 
     def setting_2(self):
         self.service.grade_change(15)
